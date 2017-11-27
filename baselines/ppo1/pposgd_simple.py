@@ -185,14 +185,11 @@ def learn(env, policy_func, *,
                 *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
                 adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
-            losses = np.mean(losses, axis=0)
-            logger.log(fmt_row(13, losses))
+            meanlosses = np.mean(losses, axis=0)
+            logger.log(fmt_row(13, meanlosses))
 
-            metrics.scalar('pol_surr', losses[0], timesteps_so_far)
-            metrics.scalar('pol_entpen', losses[1], timesteps_so_far)
-            metrics.scalar('vf_loss', losses[2], timesteps_so_far)
-            metrics.scalar('kl', losses[3], timesteps_so_far)
-            metrics.scalar('ent', losses[4], timesteps_so_far)
+            for (lossval, lossname) in zipsame(meanlosses, loss_names):
+                metrics.scalar(lossname, lossval, timesteps_so_far)
 
         logger.log("Evaluating losses...")
         losses = []
