@@ -199,7 +199,11 @@ def learn(env, policy_func, *,
         logger.log(fmt_row(13, meanlosses))
         for (lossval, name) in zipsame(meanlosses, loss_names):
             logger.record_tabular("loss_"+name, lossval)
-        logger.record_tabular("ev_tdlam_before", explained_variance(vpredbefore, tdlamret))
+
+        ev_tdlam_before = explained_variance(vpredbefore, tdlamret)
+        logger.record_tabular("ev_tdlam_before", ev_tdlam_before)
+        metrics.scalar("ev_tdlam_before", ev_tdlam_before, timesteps_so_far)
+
         lrlocal = (seg["ep_lens"], seg["ep_rets"]) # local values
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
         lens, rews = map(flatten_lists, zip(*listoflrpairs))
