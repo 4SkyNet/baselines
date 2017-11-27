@@ -179,17 +179,16 @@ def learn(env, policy_func, *,
         logger.log("Optimizing...")
         logger.log(fmt_row(13, loss_names))
         # Here we do a bunch of optimization epochs over the data
-        for _ in range(optim_epochs):
+        for ep_i in range(optim_epochs):
             losses = [] # list of tuples, each of which gives the loss for a minibatch
             for batch in d.iterate_once(optim_batchsize):
                 *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
                 adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
-            meanlosses = np.mean(losses, axis=0)
-            logger.log(fmt_row(13, meanlosses))
-
-            for (lossval, lossname) in zipsame(meanlosses, loss_names):
-                metrics.scalar(lossname, lossval, timesteps_so_far)
+            losses = np.mean(losses, axis=0)
+            logger.log(fmt_row(13, losses))
+            for (lossval, lossname) in zipsame(losses, loss_names):
+                metrics.scalar(lossname, lossval, timesteps_so_far+ep_i)
 
         logger.log("Evaluating losses...")
         losses = []
