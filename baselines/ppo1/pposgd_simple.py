@@ -139,7 +139,7 @@ def learn(env, policy_func, *,
     lenbuffer = deque(maxlen=100) # rolling buffer for episode lengths
     rewbuffer = deque(maxlen=100) # rolling buffer for episode rewards
 
-    metrics = U.TensorflowMetrics('logs', iters_so_far)
+    metrics = U.TensorflowMetrics('logs', timesteps_so_far)
 
     assert sum([max_iters>0, max_timesteps>0, max_episodes>0, max_seconds>0])==1, "Only one time constraint permitted"
 
@@ -185,7 +185,14 @@ def learn(env, policy_func, *,
                 *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
                 adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
-            logger.log(fmt_row(13, np.mean(losses, axis=0)))
+            losses = np.mean(losses, axis=0)
+            logger.log(fmt_row(13, losses))
+
+            metrics.scalar('pol_surr', losses[0], timesteps_so_far)
+            metrics.scalar('pol_entpen', losses[1], timesteps_so_far)
+            metrics.scalar('vf_loss', losses[2], timesteps_so_far)
+            metrics.scalar('kl', losses[3], timesteps_so_far)
+            metrics.scalar('ent', losses[4], timesteps_so_far)
 
         logger.log("Evaluating losses...")
         losses = []
