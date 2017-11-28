@@ -135,6 +135,7 @@ def learn(env, policy_func, *,
     episodes_so_far = 0
     timesteps_so_far = 0
     iters_so_far = 0
+    iterations = 0
     tstart = time.time()
     lenbuffer = deque(maxlen=100) # rolling buffer for episode lengths
     rewbuffer = deque(maxlen=100) # rolling buffer for episode rewards
@@ -170,8 +171,6 @@ def learn(env, policy_func, *,
         ob, ac, atarg, tdlamret = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"]
         vpredbefore = seg["vpred"] # predicted value function before udpate
         atarg = (atarg - atarg.mean()) / atarg.std() # standardized advantage function estimate
-        d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
-        optim_batchsize = optim_batchsize or ob.shape[0]
 
         steps = ac.shape[0]
         for i in range(steps):
@@ -179,6 +178,9 @@ def learn(env, policy_func, *,
             metrics.histogram("action", ac[i], timesteps_so_far + i)
             metrics.scalar("adv", atarg[i], timesteps_so_far + i)
             metrics.scalar("vtarg", tdlamret[i], timesteps_so_far + i)
+
+        d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
+        optim_batchsize = optim_batchsize or ob.shape[0]
 
         if hasattr(pi, "ob_rms"): pi.ob_rms.update(ob) # update running mean/std for policy
 
@@ -192,10 +194,17 @@ def learn(env, policy_func, *,
                 *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
                 adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
+
+                iterations += 1
+                metrics.scalar('pol_loss', newlosses[0], iterations)
+                metrics.scalar('vf_loss', newlosses[2], iterations)
+
             losses = np.mean(losses, axis=0)
             logger.log(fmt_row(13, losses))
-            for (lossval, lossname) in zipsame(losses, loss_names):
-                metrics.scalar(lossname, lossval, timesteps_so_far+ep_i)
+
+            if False:
+                for (lossval, lossname) in zipsame(losses, loss_names):
+                    metrics.scalar(lossname, lossval, timesteps_so_far+ep_i)
 
         logger.log("Evaluating losses...")
         losses = []
