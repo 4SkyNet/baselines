@@ -157,7 +157,7 @@ def learn(env, policy_func, *,
         if schedule == 'constant':
             cur_lrmult = 1.0
         elif schedule == 'linear':
-            cur_lrmult =  max(1.0 - float(timesteps_so_far) / max_timesteps, 0)
+            cur_lrmult = max(1.0 - float(timesteps_so_far) / max_timesteps, 0)
         else:
             raise NotImplementedError
 
@@ -172,6 +172,13 @@ def learn(env, policy_func, *,
         atarg = (atarg - atarg.mean()) / atarg.std() # standardized advantage function estimate
         d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
         optim_batchsize = optim_batchsize or ob.shape[0]
+
+        steps = ac.shape[0]
+        for i in range(steps):
+            metrics.histogram("state", ob[i], timesteps_so_far + i)
+            metrics.histogram("action", ac[i], timesteps_so_far + i)
+            metrics.scalar("adv", atarg[i], timesteps_so_far + i)
+            metrics.scalar("vtarg", tdlamret[i], timesteps_so_far + i)
 
         if hasattr(pi, "ob_rms"): pi.ob_rms.update(ob) # update running mean/std for policy
 
